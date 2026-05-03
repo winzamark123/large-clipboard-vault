@@ -1,34 +1,24 @@
 import { Action, ActionPanel, Clipboard, Detail, Icon, useNavigation } from "@raycast/api";
-import { useEffect, useState } from "react";
-import { saveClip, evictOldEntries } from "./lib/capture";
+import { usePromise } from "@raycast/utils";
+import { evictOldEntries, saveClip } from "./lib/capture";
 
-type State =
-  | { status: "loading" }
-  | { status: "empty" }
-  | { status: "ok"; charCount: number; saved: boolean; preview: string };
+const PREVIEW_LIMIT = 600;
 
 export default function Command() {
   const { pop } = useNavigation();
-  const [state, setState] = useState<State>({ status: "loading" });
+  const { isLoading, data } = usePromise(async () => {
+    const text = await Clipboard.readText();
+    if (!text) return { kind: "empty" } as const;
+    const { saved, charCount } = await saveClip({ text });
+    if (saved) await evictOldEntries();
+    return { kind: "ok", saved, charCount, preview: text.slice(0, PREVIEW_LIMIT) } as const;
+  });
 
-  useEffect(() => {
-    (async () => {
-      const text = await Clipboard.readText();
-      if (!text) {
-        setState({ status: "empty" });
-        return;
-      }
-      const { saved, charCount } = await saveClip({ text });
-      await evictOldEntries();
-      setState({ status: "ok", charCount, saved, preview: text.slice(0, 600) });
-    })();
-  }, []);
-
-  if (state.status === "loading") {
+  if (isLoading || !data) {
     return <Detail isLoading markdown="Saving current clipboard…" />;
   }
 
-  if (state.status === "empty") {
+  if (data.kind === "empty") {
     return (
       <Detail
         markdown={`# Clipboard is empty\n\nNothing to save.`}
@@ -41,8 +31,9 @@ export default function Command() {
     );
   }
 
-  const headline = state.saved ? "Saved to vault" : "Already in vault";
-  const markdown = `# ${headline}\n\n**${state.charCount.toLocaleString()} characters**\n\n---\n\n\`\`\`\n${state.preview}${state.preview.length < state.charCount ? "\n…" : ""}\n\`\`\``;
+  const headline = data.saved ? "Saved to vault" : "Already in vault";
+  const truncated = data.preview.length < data.charCount;
+  const markdown = `# ${headline}\n\n**${data.charCount.toLocaleString()} characters**\n\n---\n\n\`\`\`\n${data.preview}${truncated ? "\n…" : ""}\n\`\`\``;
 
   return (
     <Detail

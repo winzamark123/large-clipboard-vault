@@ -1,26 +1,32 @@
 import { executeSQL } from "@raycast/utils";
 import { createHash } from "crypto";
-import { dbPath, ensureSchema, PREVIEW_CHAR_LIMIT, sqlText } from "./db";
+import { clipExists, dbPath, ensureSchema, PREVIEW_CHAR_LIMIT, sqlText } from "./db";
 import { getMaxEntries } from "./preferences";
 
 type SaveResult = { saved: boolean; charCount: number; sha256: string };
 
-export async function saveClip({ text }: { text: string }): Promise<SaveResult> {
+export function hashText({ text }: { text: string }) {
+  return createHash("sha256").update(text).digest("hex");
+}
+
+export async function saveClip({ text, sha256: precomputed }: { text: string; sha256?: string }): Promise<SaveResult> {
   await ensureSchema();
-  const sha256 = createHash("sha256").update(text).digest("hex");
+  const sha256 = precomputed ?? hashText({ text });
   const charCount = text.length;
+
+  // cheap UNIQUE-index point lookup avoids serializing the full clip into a SQL string when it already exists
+  if (await clipExists({ sha256 })) {
+    return { saved: false, charCount, sha256 };
+  }
+
   const preview = text.slice(0, PREVIEW_CHAR_LIMIT);
   const createdAt = Date.now();
-
-  // dedupe via UNIQUE(sha256) — DB drops duplicates atomically, no read-modify-write race
-  const before = await countClips();
   await executeSQL(
     dbPath,
     `INSERT OR IGNORE INTO clips (sha256, content, char_count, preview, created_at)
-     VALUES (${sqlText(sha256)}, ${sqlText(text)}, ${charCount}, ${sqlText(preview)}, ${createdAt})`,
+     VALUES (${sqlText({ value: sha256 })}, ${sqlText({ value: text })}, ${charCount}, ${sqlText({ value: preview })}, ${createdAt})`,
   );
-  const after = await countClips();
-  return { saved: after > before, charCount, sha256 };
+  return { saved: true, charCount, sha256 };
 }
 
 export async function evictOldEntries() {
@@ -32,9 +38,4 @@ export async function evictOldEntries() {
        SELECT id FROM clips ORDER BY created_at DESC LIMIT ${max}
      )`,
   );
-}
-
-async function countClips() {
-  const rows = await executeSQL<{ n: number }>(dbPath, `SELECT COUNT(*) AS n FROM clips`);
-  return rows[0]?.n ?? 0;
 }

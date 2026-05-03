@@ -10,9 +10,9 @@ import {
   showToast,
   Toast,
 } from "@raycast/api";
-import { executeSQL, usePromise } from "@raycast/utils";
+import { usePromise } from "@raycast/utils";
 import { useState } from "react";
-import { ClipContentRow, ClipRow, dbPath, ensureSchema, sqlText } from "./lib/db";
+import { ClipRow, deleteClipById, getClipContent, listClips } from "./lib/db";
 
 const LIST_LIMIT = 200;
 
@@ -20,17 +20,7 @@ export default function Command() {
   const [searchText, setSearchText] = useState("");
 
   const { isLoading, data, revalidate } = usePromise(
-    async (q: string) => {
-      await ensureSchema();
-      const where = q.trim().length > 0 ? `WHERE content LIKE ${sqlText("%" + q + "%")}` : "";
-      return executeSQL<ClipRow>(
-        dbPath,
-        `SELECT id, preview, char_count, created_at FROM clips
-         ${where}
-         ORDER BY created_at DESC
-         LIMIT ${LIST_LIMIT}`,
-      );
-    },
+    (search: string) => listClips({ search, limit: LIST_LIMIT }),
     [searchText],
   );
 
@@ -69,12 +59,16 @@ function ClipItem({ row, onChanged }: { row: ClipRow; onChanged: () => void }) {
       accessories={[{ text: `${row.char_count.toLocaleString()} chars` }, { date: new Date(row.created_at) }]}
       actions={
         <ActionPanel>
-          <Action title="Paste to Active App" icon={Icon.Document} onAction={() => pasteClip(row.id)} />
+          <Action
+            title="Paste to Active App"
+            icon={Icon.Document}
+            onAction={() => applyClip({ id: row.id, mode: "paste" })}
+          />
           <Action
             title="Copy to Clipboard"
             icon={Icon.Clipboard}
             shortcut={{ modifiers: ["cmd"], key: "c" }}
-            onAction={() => copyClip(row.id)}
+            onAction={() => applyClip({ id: row.id, mode: "copy" })}
           />
           <Action.Push
             title="Show Full Content"
@@ -87,7 +81,7 @@ function ClipItem({ row, onChanged }: { row: ClipRow; onChanged: () => void }) {
             icon={Icon.Trash}
             style={Action.Style.Destructive}
             shortcut={{ modifiers: ["ctrl"], key: "x" }}
-            onAction={() => deleteClip({ id: row.id, onChanged })}
+            onAction={() => promptDelete({ id: row.id, onChanged })}
           />
           <Action
             title="Refresh"
@@ -102,11 +96,7 @@ function ClipItem({ row, onChanged }: { row: ClipRow; onChanged: () => void }) {
 }
 
 function ClipDetail({ id }: { id: number }) {
-  const { isLoading, data } = usePromise(async () => {
-    const rows = await executeSQL<ClipContentRow>(dbPath, `SELECT content FROM clips WHERE id = ${id}`);
-    return rows[0]?.content ?? "";
-  });
-
+  const { isLoading, data } = usePromise((clipId: number) => getClipContent({ id: clipId }), [id]);
   const content = data ?? "";
   const markdown = isLoading ? "Loading…" : `\`\`\`\n${content}\n\`\`\``;
 
@@ -124,38 +114,28 @@ function ClipDetail({ id }: { id: number }) {
   );
 }
 
-async function fetchContent(id: number) {
-  const rows = await executeSQL<ClipContentRow>(dbPath, `SELECT content FROM clips WHERE id = ${id}`);
-  return rows[0]?.content;
-}
-
-async function copyClip(id: number) {
-  const content = await fetchContent(id);
+async function applyClip({ id, mode }: { id: number; mode: "copy" | "paste" }) {
+  const content = await getClipContent({ id });
   if (!content) {
     await showToast({ style: Toast.Style.Failure, title: "Clip not found" });
     return;
   }
-  await Clipboard.copy(content);
-  await showToast({ title: "Copied", message: `${content.length.toLocaleString()} chars` });
-}
-
-async function pasteClip(id: number) {
-  const content = await fetchContent(id);
-  if (!content) {
-    await showToast({ style: Toast.Style.Failure, title: "Clip not found" });
+  if (mode === "copy") {
+    await Clipboard.copy(content);
+    await showToast({ title: "Copied", message: `${content.length.toLocaleString()} chars` });
     return;
   }
   await Clipboard.paste(content);
 }
 
-async function deleteClip({ id, onChanged }: { id: number; onChanged: () => void }) {
+async function promptDelete({ id, onChanged }: { id: number; onChanged: () => void }) {
   const confirmed = await confirmAlert({
     title: "Delete clip?",
     message: "This cannot be undone.",
     primaryAction: { title: "Delete", style: Alert.ActionStyle.Destructive },
   });
   if (!confirmed) return;
-  await executeSQL(dbPath, `DELETE FROM clips WHERE id = ${id}`);
+  await deleteClipById({ id });
   await showToast({ title: "Deleted" });
   onChanged();
 }
