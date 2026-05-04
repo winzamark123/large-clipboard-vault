@@ -21,15 +21,9 @@
       "interval": "10s"
     },
     {
-      "name": "save-clipboard",
-      "title": "Save Current Clipboard",
-      "description": "Manually save the current clipboard contents to the vault, regardless of size.",
-      "mode": "view"
-    },
-    {
       "name": "search-vault",
       "title": "Search Vault",
-      "description": "Search, copy, paste, and delete saved large clips.",
+      "description": "Search, copy, paste, and delete saved large clips. Captures the current clipboard on open if it exceeds the threshold.",
       "mode": "view"
     }
   ],

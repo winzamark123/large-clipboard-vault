@@ -11,20 +11,24 @@ Raycast's clipboard history caps each entry at **32,768 characters** ([manual](h
 | Command | Mode | What it does |
 | --- | --- | --- |
 | **Watch Clipboard** | background, every 10s | Saves the current clipboard to the vault if it exceeds 32,768 characters. |
-| **Save Current Clipboard** | view | Manually save the current clipboard regardless of size. Fallback for when the watcher misses a clip (e.g. you copied two big things in quick succession). |
 | **Search Vault** | view | Search by content substring, copy/paste back, view full content, or delete. Also captures the current clipboard on open if it's above the threshold, so a freshly copied clip is searchable instantly without waiting for the next watcher tick. |
 
 ## How capture works
 
-Three independent paths feed the vault. They share a SHA-256 dedupe key, so the same clip never gets saved twice no matter which path fires.
+Two independent paths feed the vault. They share a SHA-256 dedupe key, so the same clip never gets saved twice no matter which path fires.
 
 1. **Watcher** — fires every 10s in the background. Catches anything you copy and forget about.
-2. **Search Vault on open** — reads the current clipboard before showing the list. Fires when you open the search command, which is exactly when you want to find a recent clip.
-3. **Save Current Clipboard** — explicit, instant, no threshold. Use when you just copied something you definitely want to keep and don't want to wait.
+2. **Search Vault on open** — reads the current clipboard before showing the list, then renders. The just-copied clip is the top row before you've typed anything.
 
-### Recommended setup: bind hotkeys
+Both paths are gated on the same 32,768-char threshold and ignore non-text clipboards (images, files copied from Finder without a text representation, etc.) — see "Scope" below.
 
-Open Raycast preferences (`⌘,`) → Extensions → Large Clipboard Vault, and assign a hotkey to **Save Current Clipboard** and **Search Vault**. With both bound, capture and retrieval are one keystroke each.
+### Recommended setup: bind a hotkey
+
+Open Raycast preferences (`⌘,`) → Extensions → Large Clipboard Vault, and assign a hotkey to **Search Vault**. With it bound, you can hit one keystroke right after copying a large text and the clip is captured + the vault is open in front of you.
+
+## Scope
+
+This extension stores **plain text only**. It uses Raycast's `Clipboard.readText()`, which returns `undefined` for image-only or file-only clipboards, so non-text content is silently skipped. Mixed clipboards (e.g., rich text from a webpage) are vaulted as their plain-text representation.
 
 ## Storage
 
@@ -67,8 +71,7 @@ Other scripts:
 large-clipboard-vault/
 ├── src/
 │   ├── watch-clipboard.ts      # background watcher (no-view, 10s)
-│   ├── save-clipboard.tsx      # manual save (view)
-│   ├── search-vault.tsx        # search + actions (view)
+│   ├── search-vault.tsx        # search + actions + capture-on-open (view)
 │   └── lib/
 │       ├── sqlite.ts           # node:sqlite open/close lifecycle
 │       ├── db.ts               # schema, typed row helpers, query API

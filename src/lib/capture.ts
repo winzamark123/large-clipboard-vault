@@ -52,19 +52,19 @@ export async function evictOldEntries() {
   });
 }
 
-export async function captureFromClipboard({
-  requireLarge = true,
-}: { requireLarge?: boolean } = {}): Promise<CaptureOutcome> {
+// Clipboard.readText() returns undefined for image-only / file-only clipboards, so we naturally
+// skip non-text content here without needing to inspect Clipboard.read()'s file/html branches
+export async function captureFromClipboard(): Promise<CaptureOutcome> {
   const text = await Clipboard.readText();
   if (!text) return { kind: "empty" };
   const charCount = text.length;
-  if (requireLarge && charCount <= RAYCAST_HISTORY_CHAR_CAP) {
+  if (charCount <= RAYCAST_HISTORY_CHAR_CAP) {
     return { kind: "below-threshold", charCount };
   }
 
   const sha256 = hashText({ text });
   const preview = text.slice(0, PREVIEW_CHAR_LIMIT);
-  // shared sentinel across all three capture paths — DB roundtrip skipped when this clip was the last one any path saw
+  // shared sentinel across both capture paths — DB roundtrip skipped when this clip was the last one any path saw
   if (cache.get(LAST_HASH_CACHE_KEY) === sha256) {
     return { kind: "duplicate", charCount, sha256, preview };
   }
