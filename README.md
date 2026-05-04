@@ -12,7 +12,19 @@ Raycast's clipboard history caps each entry at **32,768 characters** ([manual](h
 | --- | --- | --- |
 | **Watch Clipboard** | background, every 10s | Saves the current clipboard to the vault if it exceeds 32,768 characters. |
 | **Save Current Clipboard** | view | Manually save the current clipboard regardless of size. Fallback for when the watcher misses a clip (e.g. you copied two big things in quick succession). |
-| **Search Vault** | view | Search by content substring, copy/paste back, view full content, or delete. |
+| **Search Vault** | view | Search by content substring, copy/paste back, view full content, or delete. Also captures the current clipboard on open if it's above the threshold, so a freshly copied clip is searchable instantly without waiting for the next watcher tick. |
+
+## How capture works
+
+Three independent paths feed the vault. They share a SHA-256 dedupe key, so the same clip never gets saved twice no matter which path fires.
+
+1. **Watcher** — fires every 10s in the background. Catches anything you copy and forget about.
+2. **Search Vault on open** — reads the current clipboard before showing the list. Fires when you open the search command, which is exactly when you want to find a recent clip.
+3. **Save Current Clipboard** — explicit, instant, no threshold. Use when you just copied something you definitely want to keep and don't want to wait.
+
+### Recommended setup: bind hotkeys
+
+Open Raycast preferences (`⌘,`) → Extensions → Large Clip Vault, and assign a hotkey to **Save Current Clipboard** and **Search Vault**. With both bound, capture and retrieval are one keystroke each.
 
 ## Storage
 
@@ -58,8 +70,9 @@ large-clip-vault/
 │   ├── save-clipboard.tsx      # manual save (view)
 │   ├── search-vault.tsx        # search + actions (view)
 │   └── lib/
-│       ├── db.ts               # path, schema, escape helper
-│       ├── capture.ts          # shared save + evict
+│       ├── sqlite.ts           # node:sqlite open/close lifecycle
+│       ├── db.ts               # schema, typed row helpers, query API
+│       ├── capture.ts          # shared captureFromClipboard + saveClip + evict
 │       └── preferences.ts      # typed preference access
 ├── package.json
 └── tsconfig.json

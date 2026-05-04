@@ -11,30 +11,40 @@ import {
   Toast,
 } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { captureFromClipboard } from "./lib/capture";
 import { ClipRow, deleteClipById, getClipContent, listClips } from "./lib/db";
 
 const LIST_LIMIT = 200;
 
 export default function Command() {
   const [searchText, setSearchText] = useState("");
+  const [captureDone, setCaptureDone] = useState(false);
+
+  // capture-on-open: surfaces the latest large clip at the top of the list before the user types,
+  // so a freshly copied >32k clip is searchable instantly without waiting for the watcher tick
+  useEffect(() => {
+    captureFromClipboard().finally(() => setCaptureDone(true));
+  }, []);
 
   const { isLoading, data, revalidate } = usePromise(
     (search: string) => listClips({ search, limit: LIST_LIMIT }),
     [searchText],
+    { execute: captureDone },
   );
 
+  const showSpinner = isLoading || !captureDone;
   const rows = data ?? [];
 
   return (
     <List
-      isLoading={isLoading}
+      isLoading={showSpinner}
       searchText={searchText}
       onSearchTextChange={setSearchText}
       searchBarPlaceholder="Search vault…"
       throttle
     >
-      {!isLoading && rows.length === 0 ? (
+      {!showSpinner && rows.length === 0 ? (
         <List.EmptyView
           icon={Icon.Tray}
           title={searchText ? "No matches" : "Vault is empty"}
