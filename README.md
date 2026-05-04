@@ -1,4 +1,4 @@
-# Large Clip Vault
+# Large Clipboard Vault
 
 Raycast extension that vaults clipboard text larger than Raycast's built-in clipboard history can store.
 
@@ -24,7 +24,7 @@ Three independent paths feed the vault. They share a SHA-256 dedupe key, so the 
 
 ### Recommended setup: bind hotkeys
 
-Open Raycast preferences (`⌘,`) → Extensions → Large Clip Vault, and assign a hotkey to **Save Current Clipboard** and **Search Vault**. With both bound, capture and retrieval are one keystroke each.
+Open Raycast preferences (`⌘,`) → Extensions → Large Clipboard Vault, and assign a hotkey to **Save Current Clipboard** and **Search Vault**. With both bound, capture and retrieval are one keystroke each.
 
 ## Storage
 
@@ -64,7 +64,7 @@ Other scripts:
 ## Project layout
 
 ```
-large-clip-vault/
+large-clipboard-vault/
 ├── src/
 │   ├── watch-clipboard.ts      # background watcher (no-view, 10s)
 │   ├── save-clipboard.tsx      # manual save (view)
