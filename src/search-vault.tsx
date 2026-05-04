@@ -41,13 +41,13 @@ export default function Command() {
       isLoading={showSpinner}
       searchText={searchText}
       onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search vault…"
+      searchBarPlaceholder="Search history…"
       throttle
     >
       {!showSpinner && rows.length === 0 ? (
         <List.EmptyView
           icon={Icon.Tray}
-          title={searchText ? "No matches" : "Vault is empty"}
+          title={searchText ? "No matches" : "Nothing here yet"}
           description={
             searchText
               ? "Try a different search."

@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "large-clipboard-vault",
-  "title": "Large Clipboard Vault",
-  "description": "Vault for clipboard text larger than Raycast's 32,768-char clipboard history cap.",
+  "name": "large-clipboard-history",
+  "title": "Large Clipboard History",
+  "description": "Captures clipboard text larger than Raycast's 32,768-char built-in clipboard history limit.",
   "icon": "extension-icon.png",
   "author": "teeranade_cheng",
   "platforms": [
@@ -22,8 +22,8 @@
     },
     {
       "name": "search-vault",
-      "title": "Search Vault",
-      "description": "Search, copy, paste, and delete saved large clips. Captures the current clipboard on open if it exceeds the threshold.",
+      "title": "Large Clipboard History",
+      "description": "Browse, search, paste back, and delete clipboard text saved by the watcher. Captures the current clipboard on open if it exceeds the threshold.",
       "mode": "view"
     }
   ],
