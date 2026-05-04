@@ -4,9 +4,7 @@ import { Db, withDb } from "./sqlite";
 export const RAYCAST_HISTORY_CHAR_CAP = 32_768;
 export const PREVIEW_CHAR_LIMIT = 200;
 
-// v2 prunes any sub-threshold rows that may have been written by the old no-threshold
-// save-clipboard command before it was removed
-const SCHEMA_VERSION = "2";
+const SCHEMA_VERSION = "1";
 const SCHEMA_CACHE_KEY = "schema-version";
 const cache = new Cache();
 
@@ -35,7 +33,6 @@ function ensureSchemaSync({ db }: { db: Db }) {
       created_at  INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_clips_created_at ON clips(created_at DESC);
-    DELETE FROM clips WHERE char_count <= ${RAYCAST_HISTORY_CHAR_CAP};
   `);
   cache.set(SCHEMA_CACHE_KEY, SCHEMA_VERSION);
   schemaReadyInProcess = true;
