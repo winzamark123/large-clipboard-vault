@@ -13,6 +13,10 @@ Raycast's built-in clipboard history caps each entry at **32,768 characters** ([
 | **Watch Clipboard** | background, every 10s | Saves the current clipboard if it exceeds 32,768 characters. |
 | **Large Clipboard History** | view | Browse, search by content substring, copy/paste back, view full content, or delete. Also captures the current clipboard on open if it's above the threshold, so a freshly copied clip is in the list instantly without waiting for the next watcher tick. |
 
+## Demo
+
+<video src="https://github.com/user-attachments/assets/680f8f07-3086-4cb5-9f67-fd0907837ae8" width="800" autoplay loop controls></video>
+
 ## How capture works
 
 Two independent paths feed the history. They share a SHA-256 dedupe key, so the same clip never gets saved twice no matter which path fires.
